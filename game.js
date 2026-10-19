@@ -421,6 +421,13 @@ function bindStartScreen() {
       document.querySelectorAll('.mode-opt').forEach((b) => b.classList.remove('selected'));
       btn.classList.add('selected');
       vsComputer = btn.dataset.mode === 'computer';
+      // vs 컴퓨터는 온라인 방이 없음. 이전에 '온라인'을 고른 채로 두면 인원 클릭이 막힘 → local로 복구
+      if (vsComputer) {
+        playType = 'local';
+        document.querySelectorAll('.play-type-opt[data-play-type]').forEach((b) => {
+          b.classList.toggle('selected', b.dataset.playType === 'local');
+        });
+      }
       updateVisibility();
       if (!vsComputer && playType === 'local') {
         if (dom.teamModeWrap) dom.teamModeWrap.classList.toggle('hidden', selectedPlayers !== 4);
@@ -442,7 +449,7 @@ function bindStartScreen() {
 
   document.querySelectorAll('.btn-opt[data-players]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (playType === 'online') return;
+      if (playType === 'online' && !vsComputer) return;
       document.querySelectorAll('.btn-opt[data-players]').forEach((b) => b.classList.remove('selected'));
       btn.classList.add('selected');
       selectedPlayers = parseInt(btn.dataset.players, 10);
@@ -1048,6 +1055,11 @@ function landOnCell(cellIndex, player) {
       state.jailTurns[idx] = 3;
       soundJail();
       showToast('무인도! 3턴 휴식.');
+      // 더블로 이동 중 무인도에 걸리면 더블 보너스를 무조건 무시하고 턴오버
+      // (tryNextTurn()의 더블 분기 방지)
+      if (state.lastDice && state.lastDice[0] === state.lastDice[1]) {
+        state.lastDice = null;
+      }
       tryNextTurn();
       break;
     case 'chance': {
@@ -1421,9 +1433,42 @@ function nextTurn() {
 
   while (state.jailTurns[state.currentPlayer - 1] > 0) {
     const p = state.currentPlayer;
+    const name = state.vsComputer && p >= 2 ? `컴퓨터 ${p}` : `플레이어 ${p}`;
+    // 무인도 휴식 1턴을 소비하는 시점에 "더블이면 즉시 탈출"
+    if (state.onlineRole !== 'guest') {
+      const d1 = 1 + Math.floor(Math.random() * 6);
+      const d2 = 1 + Math.floor(Math.random() * 6);
+      if (d1 === d2) {
+        state.jailTurns[p - 1] = 0;
+        // 탈출 판정(더블)과 동시에 즉시 이동 처리
+        state.lastDice = [d1, d2];
+        state.canRoll = false;
+        state.rolledThisTurn = true;
+        showToast(`${name} 무인도 탈출! (더블) 즉시 이동`);
+        updateTurnText();
+
+        initAudio();
+        soundDice();
+        showDice(d1, d2);
+
+        const steps = d1 + d2;
+        if (state.onlineRole === 'host' && state.onlineConn) {
+          try {
+            state.onlineConn.send({ type: 'animateMove', steps, lastDice: [d1, d2] });
+          } catch (err) {}
+        }
+
+        // 이동 시작 후, landOnCell에서 tryNextTurn()이 이어서 처리됩니다.
+        setTimeout(() => {
+          moveCurrentPlayer(steps);
+        }, 300);
+        sendStateToPeer();
+        return;
+      }
+    }
+
     state.jailTurns[p - 1]--;
     const remaining = state.jailTurns[p - 1];
-    const name = state.vsComputer && p >= 2 ? `컴퓨터 ${p}` : `플레이어 ${p}`;
     showToast(remaining > 0 ? `${name} 무인도 ${remaining}턴 대기` : `${name} 무인도에서 풀려났습니다!`);
     next = getNextPlayer();
     if (next === null) return;

@@ -1,0 +1,23 @@
+부루마블 — Netlify로 LTE/어디서나 접속하기
+========================================
+
+이미 만들어 둔 ZIP (프로젝트 밖):
+  C:\Users\ribir\Downloads\BMM-netlify.zip
+
+1) 브라우저에서 열기:
+   https://app.netlify.com/drop
+   (계정 없으면 이메일로 가입)
+
+2) 위 ZIP 파일을 페이지에 끌어다 놓기 (Drag & Drop)
+
+3) 잠시 후 https://xxxx.netlify.app 같은 주소가 나옴 → 그 주소를
+   핸드폰 LTE에서 열면 됨.
+
+4) 나중에 파일 수정 후 다시 올리려면:
+   - 같은 방식으로 새 ZIP을 만들어 다시 Drop 하거나
+   - Netlify 대시보드에서 해당 사이트 → Deploys → 드래그로 재배포
+
+참고:
+- 로컬 서버(127.0.0.1)는 끄고 써도 됨. Netlify는 인터넷에 올라간 복사본.
+- 온라인(방 만들기) 기능은 WebRTC/PeerJS라 네트워크·브라우저에 따라
+  추가 설정이 필요할 수 있음.

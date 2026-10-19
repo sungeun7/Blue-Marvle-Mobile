@@ -1,17 +1,14 @@
-const CACHE_NAME = 'bmm-cache-v1';
+const CACHE_NAME = 'bmm-cache-v3';
 const ASSETS = [
   './',
   'index.html',
-  'style.css',
-  'game.js',
+  'style.css?v=20260325',
+  'game.js?v=20260325',
   'manifest.webmanifest',
-  '우리나라.jpg',
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
   self.skipWaiting();
 });
 
@@ -31,10 +28,13 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
       return fetch(event.request).then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        if (response && response.ok && response.type === 'basic') {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
         return response;
       });
     })
   );
 });
+
